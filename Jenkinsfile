@@ -1,19 +1,43 @@
 pipeline {
-    agent any
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: maven
+    image: maven:3.9-eclipse-temurin-17
+    command:
+    - cat
+    tty: true
+'''
+        }
+    }
     stages {
         stage('Checkout') {
             steps { git url: 'https://github.com/SitiNabilah21/checklist.git', branch: 'main' }
         }
         stage('Build') {
-            steps { sh 'mvn clean compile' }
+            steps {
+                container('maven') {
+                    sh 'mvn clean compile'
+                }
+            }
         }
         stage('Test') {
-            steps { sh 'mvn test' }
+            steps {
+                container('maven') {
+                    sh 'mvn test'
+                }
+            }
         }
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
-                    sh 'mvn clean verify sonar:sonar'
+                container('maven') {
+                    withSonarQubeEnv('sonarqube') {
+                        sh 'mvn clean verify sonar:sonar'
+                    }
                 }
             }
         }
